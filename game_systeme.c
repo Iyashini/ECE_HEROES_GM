@@ -1,59 +1,51 @@
-#include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
-
 #include "game_systeme.h"
 
 // ----------------------------------
-// Role : Generate and initialize the game grid with random items.
-// Prototype : Grid grid_generation(int rows, int cols);
+// Création d'un item à partir de son type
 // ----------------------------------
-Grid grid_generation(int rows, int cols)
-{
-    Grid grid;
-    int usable_rows = rows > ROWS ? ROWS : rows;
-    int usable_cols = cols > COLS ? COLS : cols;
+static Item create_item(ItemType type) {
+    Item item;
+    item.type = type;
 
-    // Seed the random number generator once
-    static int seeded = 0;
-    if (!seeded)
-    {
-        srand((unsigned int) time(NULL));
-        seeded = 1;
+    switch (type) {
+        case ITEM_RUBY:
+            item.r = 220; item.g = 20;  item.b = 60;
+            break;
+        case ITEM_EMERALD:
+            item.r = 0;   item.g = 200; item.b = 80;
+            break;
+        case ITEM_SAPPHIRE:
+            item.r = 30;  item.g = 144; item.b = 255;
+            break;
+        case ITEM_TOPAZ:
+            item.r = 255; item.g = 215; item.b = 0;
+            break;
+        case ITEM_AMETHYST:
+            item.r = 138; item.g = 43;  item.b = 226;
+            break;
+        default:
+            item.r = 255; item.g = 255; item.b = 255;
+            break;
     }
 
-    // Initialize the grid with random items among the five basic types
-    for (int r = 0; r < usable_rows; r++)
-    {
-        for (int c = 0; c < usable_cols; c++)
-        {
-            ItemType random_type = (ItemType) (rand() % 5); // Five standard gems
-            Item item = {0, 0, 0, random_type};
+    return item;
+}
 
-            // Basic color setup for potential console use
-            switch (random_type)
-            {
-                case ITEM_RUBY:
-                    item.r = 255; item.g = 0; item.b = 0;
-                    break;
-                case ITEM_EMERALD:
-                    item.r = 0; item.g = 255; item.b = 0;
-                    break;
-                case ITEM_SAPPHIRE:
-                    item.r = 0; item.g = 0; item.b = 255;
-                    break;
-                case ITEM_TOPAZ:
-                    item.r = 255; item.g = 215; item.b = 0;
-                    break;
-                case ITEM_AMETHYST:
-                    item.r = 153; item.g = 50; item.b = 204;
-                    break;
-                default:
-                    item.r = 255; item.g = 255; item.b = 255;
-                    break;
-            }
+// ----------------------------------
+// Génération complète de la grille
+// ----------------------------------
+Grid grid_generation(int rows, int cols) {
+    Grid grid;
 
-            grid.cells[r][c] = item;
+    // La grille est de taille fixe (ROWS x COLS)
+    (void)rows;
+    (void)cols;
+
+    for (int i = 0; i < ROWS; i++) {
+        for (int j = 0; j < COLS; j++) {
+            ItemType type = (ItemType)(rand() % 5);
+            grid.cells[i][j] = create_item(type);
         }
     }
 
