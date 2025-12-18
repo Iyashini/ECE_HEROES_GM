@@ -3,8 +3,8 @@
 
 void display_item(Item item) {
     // Texte coloré en RGB + symbole visible
-    printf("\033[38;2;%d;%d;%dm[]\033[0m",
-           item.r, item.g, item.b);
+    printf("\033[48;2;%d;%d;%dm  \033[0m", item.r, item.g, item.b);
+
 }
 
 void display_grid(Grid grid) {

@@ -10,22 +10,22 @@ static Item create_item(ItemType type) {
 
     switch (type) {
         case ITEM_RUBY:
-            item.r = 220; item.g = 20;  item.b = 60;
+            item.r = 225; item.g = 160;  item.b = 160;
             break;
         case ITEM_EMERALD:
-            item.r = 0;   item.g = 200; item.b = 80;
+            item.r = 170;   item.g = 230; item.b = 190;
             break;
         case ITEM_SAPPHIRE:
-            item.r = 30;  item.g = 144; item.b = 255;
+            item.r = 170;  item.g = 200; item.b = 255;
             break;
         case ITEM_TOPAZ:
-            item.r = 255; item.g = 215; item.b = 0;
+            item.r = 255; item.g = 235; item.b = 170;
             break;
         case ITEM_AMETHYST:
-            item.r = 138; item.g = 43;  item.b = 226;
+            item.r = 210; item.g = 180;  item.b = 255;
             break;
         default:
-            item.r = 255; item.g = 255; item.b = 255;
+            item.r = 150; item.g = 220; item.b = 215;
             break;
     }
 
