@@ -1,8 +1,12 @@
 #include <stdio.h>
-#include <stdlib.h>
 
-int main()
+#include "display.h"
+
+int main(void)
 {
-    printf("Hello world!\n");
+    // Génération et affichage d'une grille initiale
+    Grid grid = grid_generation(ROWS, COLS);
+    display_grid(grid);
+
     return 0;
 }
