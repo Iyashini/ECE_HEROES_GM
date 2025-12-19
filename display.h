@@ -26,4 +26,7 @@ void display_username(char* username);
 // Final stats
 void display_stats(int score, int hp, int time_left, int actions_left);
 
+// Grid with cursor & selection
+void display_grid_with_cursor(Grid grid, Cursor cursor, Selection sel);
+
 #endif // DISPLAY_H_INCLUDED

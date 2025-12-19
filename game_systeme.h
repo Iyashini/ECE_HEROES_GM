@@ -25,20 +25,33 @@ typedef struct {
     Item cells[ROWS][COLS];
 } Grid;
 
-// Génération
-Grid grid_generation(int rows, int cols);
+// Curseur + sélection (pour le swap)
+typedef struct {
+    int row;
+    int col;
+} Cursor;
 
-// Patterns
+typedef struct {
+    bool active;
+    int row;
+    int col;
+    bool blink;
+} Selection;
+
+// Génération / patterns
+Grid grid_generation(int rows, int cols);
 bool pattern_recognition(Grid *grid);
 
-// Suppression / gravité / remplissage
+// Suppression / refill / gravité
 Grid remove_marked_items(Grid grid);
-Grid apply_gravity(Grid grid);
 Grid refill_grid(Grid grid);
 bool gravity_step(Grid *grid);
-void animate_gravity(Grid *grid);
 bool has_empty_cells(Grid grid);
 
+// Déplacements / swap
+void cursor_move(Cursor *cursor, int dr, int dc);
+void selection_start(Selection *sel, Cursor cursor);
+bool try_swap(Grid *grid, Selection *sel, int dr, int dc);
 
 
 #endif
