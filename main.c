@@ -42,7 +42,7 @@ int menu_loop(void) {
 // ============================
 // Boucle de jeu
 // ============================
-void game_loop(const char *pseudo, Grid *grid, Cursor *cursor, Selection *sel) {
+void game_loop(const char *pseudo, Grid *grid, Cursor *cursor, Selection *sel, GameState *state) {
 
     clear_screen(); // UN seul clear au début
 
@@ -70,14 +70,14 @@ void game_loop(const char *pseudo, Grid *grid, Cursor *cursor, Selection *sel) {
 
         time_t now = time(NULL);
         if (now - last_tick >= 1) {
-            state.time_left--;
+            state->time_left--;
             last_tick = now;
 
-            if (state.time_left <= 0) {
-                state.lives--;
-                state.time_left = 300; // reset timer (5 min)
+            if (state->time_left <= 0) {
+                state->lives--;
+                state->time_left = 300; // reset timer (5 min)
 
-                if (state.lives <= 0) {
+                if (state->lives <= 0) {
                     goto_top();
                     printf("GAME OVER\n");
                     Sleep(1500);
@@ -100,7 +100,7 @@ void game_loop(const char *pseudo, Grid *grid, Cursor *cursor, Selection *sel) {
         // sauvegarde
         if (key == 's' || key == 'S') {
 
-            save_game_for_user(pseudo, *grid, *cursor, *sel, state);
+            save_game_for_user(pseudo, *grid, *cursor, *sel, *state);
 
 
             goto_top();
@@ -126,7 +126,7 @@ void game_loop(const char *pseudo, Grid *grid, Cursor *cursor, Selection *sel) {
             }
             else {
                 if (try_swap(grid, sel, dr, dc)) {
-                    state.score += 10;
+                    state->score += 10;
                     // animation douce pendant la résolution
                     while (gravity_step(grid)) {
                         goto_top();
