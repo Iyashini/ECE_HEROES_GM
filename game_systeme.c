@@ -1,5 +1,7 @@
 #include "game_systeme.h"
 #include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
 
 // ============================
 // Création d'un item (pastel)
@@ -14,14 +16,160 @@ static Item create_item(ItemType type) {
         case ITEM_SAPPHIRE: item.r = 170; item.g = 200; item.b = 255; break;
         case ITEM_TOPAZ:    item.r = 255; item.g = 235; item.b = 170; break;
         case ITEM_AMETHYST: item.r = 210; item.g = 180; item.b = 255; break;
-        case ITEM_ECE:      item.r = 150; item.g = 220; item.b = 215; break;
         default:            item.r = 0;   item.g = 0;   item.b = 0;   break;
     }
     return item;
 }
 
 // ============================
-// Génération stable de la grille
+// État du jeu
+// ============================
+void init_game_state(GameState *state) {
+    state->score = 0;
+    state->lives = 5;
+    state->time_left = 300;
+}
+
+// ============================
+// USERS
+// ============================
+#define USERS_FILE "users.txt"
+
+bool user_exists(const char *pseudo) {
+    FILE *f = fopen(USERS_FILE, "r");
+    if (!f) return false;
+
+    char line[64];
+    while (fgets(line, sizeof(line), f)) {
+        line[strcspn(line, "\n")] = 0;
+        if (strcmp(line, pseudo) == 0) {
+            fclose(f);
+            return true;
+        }
+    }
+    fclose(f);
+    return false;
+}
+
+void register_user(const char *pseudo) {
+    FILE *f = fopen(USERS_FILE, "a");
+    if (!f) return;
+    fprintf(f, "%s\n", pseudo);
+    fclose(f);
+}
+
+int load_users(char users[][32], int max_users) {
+    FILE *f = fopen(USERS_FILE, "r");
+    if (!f) return 0;
+
+    int count = 0;
+    while (count < max_users && fgets(users[count], 32, f)) {
+        users[count][strcspn(users[count], "\n")] = 0;
+        count++;
+    }
+    fclose(f);
+    return count;
+}
+
+// ============================
+// SAVE / LOAD
+// ============================
+static void make_save_filename(char *out, size_t size, const char *pseudo) {
+    snprintf(out, size, "save_%s.txt", pseudo);
+}
+
+static const char *SAVE_HEADER = "ECEHEROES_SAVE_V1";
+
+bool save_game_for_user(const char *pseudo, Grid grid, Cursor cursor, Selection sel, GameState state){
+
+    char filename[128];
+    make_save_filename(filename, sizeof(filename), pseudo);
+
+    FILE *f = fopen(filename, "w");
+    if (!f) return false;
+
+    fprintf(f, "%s\n", SAVE_HEADER);
+    fprintf(f, "%d %d\n", ROWS, COLS);
+    fprintf(f, "CURSOR %d %d\n", cursor.row, cursor.col);
+    fprintf(f, "SELECTION %d %d %d %d\n",
+            sel.active ? 1 : 0,
+            sel.row,
+            sel.col,
+            sel.blink ? 1 : 0);
+
+    fprintf(f, "STATE %d %d %d\n",
+        state.score,
+        state.lives,
+        state.time_left);
+
+
+
+    fprintf(f, "GRID\n");
+    for (int i = 0; i < ROWS; i++) {
+        for (int j = 0; j < COLS; j++) {
+            fprintf(f, "%d ", grid.cells[i][j].type);
+        }
+        fprintf(f, "\n");
+    }
+
+    fclose(f);
+    return true;
+}
+
+bool load_game_for_user(const char *pseudo, Grid *grid, Cursor *cursor, Selection *sel, GameState *state){
+
+    char filename[128];
+    make_save_filename(filename, sizeof(filename), pseudo);
+
+    FILE *f = fopen(filename, "r");
+    if (!f) return false;
+
+    char header[64];
+    fgets(header, sizeof(header), f);
+    header[strcspn(header, "\n")] = 0;
+    if (strcmp(header, SAVE_HEADER) != 0) {
+        fclose(f);
+        return false;
+    }
+
+    int r, c;
+    fscanf(f, "%d %d\n", &r, &c);
+    fscanf(f, "CURSOR %d %d\n", &cursor->row, &cursor->col);
+
+    int active_i, blink_i;
+    fscanf(f, "SELECTION %d %d %d %d\n",
+           &active_i, &sel->row, &sel->col, &blink_i);
+    sel->active = active_i;
+    sel->blink = blink_i;
+
+    if (fscanf(f, "STATE %d %d %d\n",
+           &state->score,
+           &state->lives,
+           &state->time_left) != 3) {
+    fclose(f);
+    perror("Erreur lecture state");
+    return false;
+}
+
+    
+
+    char tag[16];
+    fgets(tag, sizeof(tag), f);
+
+    for (int i = 0; i < ROWS; i++) {
+        for (int j = 0; j < COLS; j++) {
+            int t;
+            fscanf(f, "%d", &t);
+            grid->cells[i][j] = create_item((ItemType)t);
+        }
+    }
+
+    fclose(f);
+    return true;
+}
+
+// ============================
+// Génération stable
 // ============================
 Grid grid_generation(int rows, int cols) {
     Grid grid;
@@ -33,289 +181,79 @@ Grid grid_generation(int rows, int cols) {
             int tries = 0;
 
             do {
-                t = (ItemType)(rand() % 5); // 5 gemmes de base
+                t = rand() % 5;
                 tries++;
-                if (tries > 20) break;
             } while (
-                (j >= 2 &&
-                 grid.cells[i][j-1].type == t &&
-                 grid.cells[i][j-2].type == t)
-                ||
-                (i >= 2 &&
-                 grid.cells[i-1][j].type == t &&
-                 grid.cells[i-2][j].type == t)
+                tries < 20 &&
+                ((j >= 2 &&
+                  grid.cells[i][j-1].type == t &&
+                  grid.cells[i][j-2].type == t) ||
+                 (i >= 2 &&
+                  grid.cells[i-1][j].type == t &&
+                  grid.cells[i-2][j].type == t))
             );
 
             grid.cells[i][j] = create_item(t);
         }
     }
-
     return grid;
 }
 
 // ============================
-// Reconnaissance des patterns (marque en blanc)
-// Retourne true si au moins un pattern est trouvé
+// Pattern recognition (>=3)
 // ============================
 bool pattern_recognition(Grid *grid) {
 
     bool found = false;
     int marks[ROWS][COLS] = {0};
 
-    // =========================
-    // 0) CARRÉ 3x3 (9 items)
-    // =========================
-    for (int i = 0; i <= ROWS - 3; i++) {
+    for (int i = 0; i < ROWS; i++) {
         for (int j = 0; j <= COLS - 3; j++) {
-
             ItemType t = grid->cells[i][j].type;
-            if (t == ITEM_EMPTY)
-                continue;
+            if (t != ITEM_EMPTY &&
+                grid->cells[i][j+1].type == t &&
+                grid->cells[i][j+2].type == t) {
 
-            bool square = true;
-
-            for (int di = 0; di < 3 && square; di++) {
-                for (int dj = 0; dj < 3; dj++) {
-                    if (grid->cells[i + di][j + dj].type != t) {
-                        square = false;
-                        break;
-                    }
-                }
-            }
-
-            if (square) {
+                marks[i][j] = marks[i][j+1] = marks[i][j+2] = 1;
                 found = true;
-                for (int di = 0; di < 3; di++)
-                    for (int dj = 0; dj < 3; dj++)
-                        marks[i + di][j + dj] = 1;
             }
         }
     }
 
-    // =========================
-    // 1) CARRÉ 4x4
-    // =========================
-    for (int i = 0; i <= ROWS - 4; i++) {
-        for (int j = 0; j <= COLS - 4; j++) {
-
+    for (int j = 0; j < COLS; j++) {
+        for (int i = 0; i <= ROWS - 3; i++) {
             ItemType t = grid->cells[i][j].type;
-            if (t == ITEM_EMPTY) continue;
-
-            bool square = true;
-
-            for (int di = 0; di < 4 && square; di++) {
-                for (int dj = 0; dj < 4; dj++) {
-                    if (grid->cells[i + di][j + dj].type != t) {
-                        square = false;
-                        break;
-                    }
-                }
-            }
-
-            if (square) {
-                found = true;
-                for (int di = 0; di < 4; di++)
-                    for (int dj = 0; dj < 4; dj++)
-                        marks[i + di][j + dj] = 1;
-            }
-        }
-    }
-
-    // =========================
-    // 2) CROIX DE 9
-    // =========================
-    for (int i = 1; i < ROWS - 1; i++) {
-        for (int j = 1; j < COLS - 1; j++) {
-
-            ItemType t = grid->cells[i][j].type;
-            if (t == ITEM_EMPTY) continue;
-
-            if (grid->cells[i-1][j].type == t &&
+            if (t != ITEM_EMPTY &&
                 grid->cells[i+1][j].type == t &&
-                grid->cells[i][j-1].type == t &&
-                grid->cells[i][j+1].type == t) {
+                grid->cells[i+2][j].type == t) {
 
+                marks[i][j] = marks[i+1][j] = marks[i+2][j] = 1;
                 found = true;
-
-                for (int x = 0; x < COLS; x++)
-                    if (grid->cells[i][x].type == t)
-                        marks[i][x] = 1;
-
-                for (int y = 0; y < ROWS; y++)
-                    if (grid->cells[y][j].type == t)
-                        marks[y][j] = 1;
             }
         }
     }
 
-    // =========================
-    // 3) SUITE DE 6 (H + V)
-    // =========================
-    for (int i = 0; i < ROWS; i++) {
-        for (int j = 0; j <= COLS - 6; j++) {
-
-            ItemType t = grid->cells[i][j].type;
-            if (t == ITEM_EMPTY) continue;
-
-            bool match = true;
-            for (int k = 1; k < 6; k++) {
-                if (grid->cells[i][j + k].type != t) {
-                    match = false;
-                    break;
-                }
-            }
-
-            if (match) {
-                found = true;
-                for (int x = 0; x < ROWS; x++)
-                    for (int y = 0; y < COLS; y++)
-                        if (grid->cells[x][y].type == t)
-                            marks[x][y] = 1;
-            }
-        }
-    }
-
-    for (int j = 0; j < COLS; j++) {
-        for (int i = 0; i <= ROWS - 6; i++) {
-
-            ItemType t = grid->cells[i][j].type;
-            if (t == ITEM_EMPTY) continue;
-
-            bool match = true;
-            for (int k = 1; k < 6; k++) {
-                if (grid->cells[i + k][j].type != t) {
-                    match = false;
-                    break;
-                }
-            }
-
-            if (match) {
-                found = true;
-                for (int x = 0; x < ROWS; x++)
-                    for (int y = 0; y < COLS; y++)
-                        if (grid->cells[x][y].type == t)
-                            marks[x][y] = 1;
-            }
-        }
-    }
-
-    // =========================
-    // 4) SUITE DE 4 (H + V)
-    // =========================
-    for (int i = 0; i < ROWS; i++) {
-        for (int j = 0; j <= COLS - 4; j++) {
-
-            ItemType t = grid->cells[i][j].type;
-            if (t == ITEM_EMPTY) continue;
-
-            bool match = true;
-            for (int k = 1; k < 4; k++) {
-                if (grid->cells[i][j + k].type != t) {
-                    match = false;
-                    break;
-                }
-            }
-
-            if (match) {
-                found = true;
-                for (int k = 0; k < 4; k++)
-                    marks[i][j + k] = 1;
-            }
-        }
-    }
-
-    for (int j = 0; j < COLS; j++) {
-        for (int i = 0; i <= ROWS - 4; i++) {
-
-            ItemType t = grid->cells[i][j].type;
-            if (t == ITEM_EMPTY) continue;
-
-            bool match = true;
-            for (int k = 1; k < 4; k++) {
-                if (grid->cells[i + k][j].type != t) {
-                    match = false;
-                    break;
-                }
-            }
-
-            if (match) {
-                found = true;
-                for (int k = 0; k < 4; k++)
-                    marks[i + k][j] = 1;
-            }
-        }
-    }
-
-    // =========================
-    // Application des marques
-    // =========================
-    for (int i = 0; i < ROWS; i++) {
-        for (int j = 0; j < COLS; j++) {
-            if (marks[i][j]) {
-                grid->cells[i][j].type = ITEM_EMPTY;
-            }
-        }
-    }
+    for (int i = 0; i < ROWS; i++)
+        for (int j = 0; j < COLS; j++)
+            if (marks[i][j])
+                grid->cells[i][j] = create_item(ITEM_EMPTY);
 
     return found;
 }
 
-
 // ============================
-// Suppression (blanc -> empty)
-// ============================
-Grid remove_marked_items(Grid grid) {
-    for (int i = 0; i < ROWS; i++) {
-        for (int j = 0; j < COLS; j++) {
-            if (grid.cells[i][j].r == 255 &&
-                grid.cells[i][j].g == 255 &&
-                grid.cells[i][j].b == 255) {
-
-                grid.cells[i][j].type = ITEM_EMPTY;
-                grid.cells[i][j].r = 0;
-                grid.cells[i][j].g = 0;
-                grid.cells[i][j].b = 0;
-            }
-        }
-    }
-    return grid;
-}
-
-// ============================
-// Remplissage (1 par colonne)
-// ============================
-Grid refill_grid(Grid grid) {
-    for (int col = 0; col < COLS; col++) {
-        for (int row = 0; row < ROWS; row++) {
-            if (grid.cells[row][col].type == ITEM_EMPTY) {
-                ItemType t = (ItemType)(rand() % 5);
-                grid.cells[row][col] = create_item(t);
-                break;
-            }
-        }
-    }
-    return grid;
-}
-
-// ============================
-// Gravité pas à pas
+// Gravité
 // ============================
 bool gravity_step(Grid *grid) {
     bool moved = false;
 
     for (int i = ROWS - 2; i >= 0; i--) {
         for (int j = 0; j < COLS; j++) {
-
             if (grid->cells[i][j].type != ITEM_EMPTY &&
-                grid->cells[i + 1][j].type == ITEM_EMPTY) {
+                grid->cells[i+1][j].type == ITEM_EMPTY) {
 
-                grid->cells[i + 1][j] = grid->cells[i][j];
-
-                grid->cells[i][j].type = ITEM_EMPTY;
-                grid->cells[i][j].r = 0;
-                grid->cells[i][j].g = 0;
-                grid->cells[i][j].b = 0;
-
+                grid->cells[i+1][j] = grid->cells[i][j];
+                grid->cells[i][j] = create_item(ITEM_EMPTY);
                 moved = true;
             }
         }
@@ -323,13 +261,24 @@ bool gravity_step(Grid *grid) {
     return moved;
 }
 
+// ============================
+// Remplissage
+// ============================
+Grid refill_grid(Grid grid) {
+    for (int j = 0; j < COLS; j++)
+        for (int i = 0; i < ROWS; i++)
+            if (grid.cells[i][j].type == ITEM_EMPTY) {
+                grid.cells[i][j] = create_item(rand() % 5);
+                break;
+            }
+    return grid;
+}
+
 bool has_empty_cells(Grid grid) {
-    for (int i = 0; i < ROWS; i++) {
-        for (int j = 0; j < COLS; j++) {
+    for (int i = 0; i < ROWS; i++)
+        for (int j = 0; j < COLS; j++)
             if (grid.cells[i][j].type == ITEM_EMPTY)
                 return true;
-        }
-    }
     return false;
 }
 
@@ -353,30 +302,61 @@ static void swap_items(Grid *grid, int r1, int c1, int r2, int c2) {
     grid->cells[r2][c2] = tmp;
 }
 
+// ============================
+// Résolution complète (MOTEUR)
+// ============================
+int resolve_grid(Grid *grid) {
+
+    int destroyed = 0;
+    bool again;
+
+    do {
+        again = false;
+
+        if (pattern_recognition(grid)) {
+            destroyed++;
+            again = true;
+        }
+
+        while (gravity_step(grid)) {}
+
+        if (has_empty_cells(*grid)) {
+            *grid = refill_grid(*grid);
+            again = true;
+        }
+
+        while (gravity_step(grid)) {}
+
+    } while (again);
+
+    return destroyed;
+}
+
+// ============================
+// Swap joueur
+// ============================
 bool try_swap(Grid *grid, Selection *sel, int dr, int dc) {
 
     if (!sel->active)
         return false;
 
-    int r2 = sel->row + dr;
-    int c2 = sel->col + dc;
+    int r1 = sel->row;
+    int c1 = sel->col;
+    int r2 = r1 + dr;
+    int c2 = c1 + dc;
+
+    sel->active = false;
 
     if (r2 < 0 || r2 >= ROWS || c2 < 0 || c2 >= COLS)
         return false;
 
-    swap_items(grid, sel->row, sel->col, r2, c2);
+    swap_items(grid, r1, c1, r2, c2);
 
-    // Important: pattern_recognition marque en blanc => ça modifie la grille.
-    // Pour valider un swap proprement, il faudra une fonction "check_only" plus tard.
-    // Pour l'instant, on accepte cette approche debug.
     if (!pattern_recognition(grid)) {
-        swap_items(grid, sel->row, sel->col, r2, c2);
-        sel->active = false;
+        swap_items(grid, r1, c1, r2, c2);
         return false;
     }
 
-    sel->active = false;
+    resolve_grid(grid);
     return true;
 }
-
-

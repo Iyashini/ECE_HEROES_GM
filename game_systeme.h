@@ -13,7 +13,8 @@ typedef enum {
     ITEM_SAPPHIRE,
     ITEM_TOPAZ,
     ITEM_AMETHYST,
-    ITEM_ECE
+    ITEM_ECE,
+    ITEM_BOMB
 } ItemType;
 
 typedef struct {
@@ -38,6 +39,13 @@ typedef struct {
     bool blink;
 } Selection;
 
+typedef struct {
+    int score;
+    int lives;
+    int time_left;   // en secondes
+} GameState;
+
+
 // Génération / patterns
 Grid grid_generation(int rows, int cols);
 bool pattern_recognition(Grid *grid);
@@ -52,6 +60,31 @@ bool has_empty_cells(Grid grid);
 void cursor_move(Cursor *cursor, int dr, int dc);
 void selection_start(Selection *sel, Cursor cursor);
 bool try_swap(Grid *grid, Selection *sel, int dr, int dc);
+
+// Sauvegarde / Chargement
+bool user_exists(const char *pseudo);
+void register_user(const char *pseudo);
+
+bool save_game_for_user(const char *pseudo,
+                        Grid grid,
+                        Cursor cursor,
+                        Selection sel,
+                        GameState state);
+
+bool load_game_for_user(const char *pseudo,
+                        Grid *grid,
+                        Cursor *cursor,
+                        Selection *sel,
+                        GameState *state);
+
+
+// Liste des utilisateurs
+int load_users(char users[][32], int max_users);
+
+void init_game_state(GameState *state);
+void update_score(GameState *state, int destroyed);
+void lose_life(GameState *state);
+bool is_game_over(GameState *state);
 
 
 #endif
