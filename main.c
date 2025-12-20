@@ -59,10 +59,10 @@ void game_loop(const char *pseudo, Grid *grid, Cursor *cursor, Selection *sel) {
         goto_top();
         printf("=== ECE HEROES === | Joueur : %s\n", pseudo);
         printf("Score : %d   Vies : %d   Temps : %02d:%02d\n",
-            state.score,
-            state.lives,
-            state.time_left / 60,
-            state.time_left % 60);
+            state->score,
+            state->lives,
+            state->time_left / 60,
+            state->time_left % 60);
         printf("[Fleches] Deplacer  [ENTREE] Selection  [S] Sauver  [Q] Menu\n\n");
         display_grid_with_cursor(*grid, *cursor, *sel);
 
@@ -188,7 +188,7 @@ int main(void) {
                 Selection sel = {0, 0, 0, 0};
                 GameState state;
                 init_game_state(&state);
-                game_loop(pseudo, &grid, &cursor, &sel);
+                game_loop(pseudo, &grid, &cursor, &sel, &state);
                 break;
             }
 
@@ -232,7 +232,7 @@ int main(void) {
                         GameState state;
 
                         if (load_game_for_user(users[selected], &grid, &cursor, &sel, &state)) {
-                            game_loop(users[selected], &grid, &cursor, &sel, state);
+                            game_loop(users[selected], &grid, &cursor, &sel, &state);
                         } else {
                             clear_screen();
                             printf("Impossible de charger la partie.\n");

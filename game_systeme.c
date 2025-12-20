@@ -52,6 +52,7 @@ bool user_exists(const char *pseudo) {
 }
 
 void register_user(const char *pseudo) {
+    // Append user to file
     FILE *f = fopen(USERS_FILE, "a");
     if (!f) return;
     fprintf(f, "%s\n", pseudo);
@@ -59,11 +60,12 @@ void register_user(const char *pseudo) {
 }
 
 int load_users(char users[][32], int max_users) {
+    // Load users from file
     FILE *f = fopen(USERS_FILE, "r");
     if (!f) return 0;
 
     int count = 0;
-    while (count < max_users && fgets(users[count], 32, f)) {
+    while (count < max_users && fgets(users[count], 32, f)) { // limit to 31 chars + null
         users[count][strcspn(users[count], "\n")] = 0;
         count++;
     }

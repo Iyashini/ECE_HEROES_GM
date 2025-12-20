@@ -12,6 +12,7 @@ void display_menu(int selected);
 void display_rules(void);
 void display_settings(void);
 void display_load_menu(void);
+void game_loop(const char *pseudo, Grid *grid, Cursor *cursor, Selection *sel, GameState *state);
 
 // ===== GRILLE =====
 void display_item(Item item);
