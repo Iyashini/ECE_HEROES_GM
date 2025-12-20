@@ -45,8 +45,6 @@ int menu_loop(void) {
 void game_loop(const char *pseudo, Grid *grid, Cursor *cursor, Selection *sel) {
 
     clear_screen(); // UN seul clear au début
-    GameState state;
-    init_game_state(&state);
 
     time_t last_tick = time(NULL);
 
@@ -188,7 +186,8 @@ int main(void) {
                 Grid grid = grid_generation(ROWS, COLS);
                 Cursor cursor = {0, 0};
                 Selection sel = {0, 0, 0, 0};
-
+                GameState state;
+                init_game_state(&state);
                 game_loop(pseudo, &grid, &cursor, &sel);
                 break;
             }
@@ -233,7 +232,7 @@ int main(void) {
                         GameState state;
 
                         if (load_game_for_user(users[selected], &grid, &cursor, &sel, &state)) {
-                            game_loop(users[selected], &grid, &cursor, &sel);
+                            game_loop(users[selected], &grid, &cursor, &sel, state);
                         } else {
                             clear_screen();
                             printf("Impossible de charger la partie.\n");

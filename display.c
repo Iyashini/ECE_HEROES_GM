@@ -9,7 +9,7 @@ static void reset_color(void);
 
 
 void clear_screen(void) {
-    // Efface + curseur en haut (ANSI). Sur Windows 10/11 ça marche si console compatible.
+    // Efface + curseur en haut.
     printf("\033[2J\033[H");
 }
 
@@ -51,12 +51,12 @@ void display_menu(int selected) {
     for (int i = 0; i < 5; i++) {
 
         if (i == selected) {
-            set_bg(colors[i][0]/2, colors[i][1]/2, colors[i][2]/2);
+            set_bg(colors[i][0]/2, colors[i][1]/2, colors[i][2]/2); // Fond sombre
             set_fg(0,0,0);
             printf("  > %-20s  ", items[i]);
             reset_color();
         } else {
-            set_fg(colors[i][0], colors[i][1], colors[i][2]);
+            set_fg(colors[i][0], colors[i][1], colors[i][2]); // Couleur claire
             printf("    %-20s  ", items[i]);
             reset_color();
         }
@@ -72,6 +72,7 @@ void display_menu(int selected) {
 
 
 void display_rules(void) {
+    // Affiche les regles du jeu
     clear_screen();
 
     printf("================ REGLES DU JEU ================\n\n");
@@ -87,6 +88,7 @@ void display_rules(void) {
 }
 
 void display_settings(void) {
+    // Affiche les parametres du jeu
     clear_screen();
 
     printf("================ PARAMETRES ================\n\n");
@@ -97,6 +99,7 @@ void display_settings(void) {
 }
 
 void display_load_menu(void) {
+    // Affiche le menu de chargement
     clear_screen();
 
     printf("================ CHARGER UNE PARTIE ================\n\n");
@@ -107,6 +110,7 @@ void display_load_menu(void) {
 }
 
 void display_item(Item item) {
+    // Affiche un item avec sa couleur
     if (item.type == ITEM_EMPTY) {
         printf("\033[48;2;0;0;0m   \033[0m");
         return;
@@ -117,6 +121,7 @@ void display_item(Item item) {
 }
 
 void display_grid(Grid grid) {
+    // Affiche la grille sans curseur ni sélection
     for (int i = 0; i < ROWS; i++) {
         for (int j = 0; j < COLS; j++) {
             display_item(grid.cells[i][j]);
@@ -163,10 +168,12 @@ void display_grid_with_cursor(Grid grid, Cursor cursor, Selection sel) {
     }
 }
 
+// Déplace le curseur en haut à gauche
 void goto_top(void) {
     printf("\033[H");
 }
 
+// Fonctions d'aide pour les couleurs ANSI
 static void set_bg(int r, int g, int b) {
     printf("\033[48;2;%d;%d;%dm", r, g, b);
 }
